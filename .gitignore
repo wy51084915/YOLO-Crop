@@ -6,4 +6,6 @@ runs/
 *.tmp
 __pycache__/
 *.pyc
+*.engine
+*.trt
 
