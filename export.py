@@ -56,15 +56,17 @@ def try_export(inner_func):
 
     def outer_func(*args, **kwargs):
         prefix = inner_args['prefix']
-        try:
-            with Profile() as dt:
-                f, model = inner_func(*args, **kwargs)
-            LOGGER.info(f'{prefix} export success ✅ {dt.t:.1f}s, saved as {f} ({file_size(f):.1f} MB)')
-            return f, model
-        except Exception as e:
-            LOGGER.info(f'{prefix} export failure ❌ {dt.t:.1f}s: {e}')
-            return None, None
-
+        f, model = inner_func(*args, **kwargs)
+        # LOGGER.info(f'{prefix} export success ✅ {dt.t:.1f}s, saved as {f} ({file_size(f):.1f} MB)')
+        return f, model
+        # try:
+        #     with Profile() as dt:
+        #         f, model = inner_func(*args, **kwargs)
+        #     LOGGER.info(f'{prefix} export success ✅ {dt.t:.1f}s, saved as {f} ({file_size(f):.1f} MB)')
+        #     return f, model
+        # except Exception as e:
+        #     LOGGER.info(f'{prefix} export failure ❌ {dt.t:.1f}s: {e}')
+        #     return None, None
     return outer_func
 
 
@@ -149,7 +151,7 @@ def export_onnx_end2end(model, im, file, simplify, topk_all, iou_thres, conf_thr
     f = os.path.splitext(file)[0] + "-end2end.onnx"
     batch_size = 'batch'
 
-    dynamic_axes = {'images': {0 : 'batch', 2: 'height', 3:'width'}, } # variable length axes
+    dynamic_axes = {'images': {0 : 'batch'}, } # variable length axes
 
     output_axes = {
                     'num_dets': {0: 'batch'},
@@ -638,8 +640,8 @@ def run(
 
 def parse_opt():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data', type=str, default=ROOT / 'data/coco.yaml', help='dataset.yaml path')
-    parser.add_argument('--weights', nargs='+', type=str, default=ROOT / 'yolo.pt', help='model.pt path(s)')
+    parser.add_argument('--data', type=str, default=ROOT / 'data/NewThings.yaml', help='dataset.yaml path')
+    parser.add_argument('--weights', nargs='+', type=str, default=ROOT / 'weights/best.pt', help='model.pt path(s)')
     parser.add_argument('--imgsz', '--img', '--img-size', nargs='+', type=int, default=[640, 640], help='image (h, w)')
     parser.add_argument('--batch-size', type=int, default=1, help='batch size')
     parser.add_argument('--device', default='cpu', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
@@ -657,8 +659,8 @@ def parse_opt():
     parser.add_argument('--agnostic-nms', action='store_true', help='TF: add agnostic NMS to model')
     parser.add_argument('--topk-per-class', type=int, default=100, help='TF.js NMS: topk per class to keep')
     parser.add_argument('--topk-all', type=int, default=100, help='ONNX END2END/TF.js NMS: topk for all classes to keep')
-    parser.add_argument('--iou-thres', type=float, default=0.45, help='ONNX END2END/TF.js NMS: IoU threshold')
-    parser.add_argument('--conf-thres', type=float, default=0.25, help='ONNX END2END/TF.js NMS: confidence threshold')
+    parser.add_argument('--iou-thres', type=float, default=0.5, help='ONNX END2END/TF.js NMS: IoU threshold')
+    parser.add_argument('--conf-thres', type=float, default=0.3, help='ONNX END2END/TF.js NMS: confidence threshold')
     parser.add_argument(
         '--include',
         nargs='+',

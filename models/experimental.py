@@ -3,7 +3,7 @@ import math
 import numpy as np
 import torch
 import torch.nn as nn
-
+import random
 from utils.downloads import attempt_download
 
 
@@ -79,10 +79,14 @@ class ORT_NMS(torch.autograd.Function):
         batch = scores.shape[0]
         num_det = random.randint(0, 100)
         batches = torch.randint(0, batch, (num_det,)).sort()[0].to(device)
+        # print("batches",batches.shape, batches)
         idxs = torch.arange(100, 100 + num_det).to(device)
+        # print("idxs",idxs.shape, idxs)
         zeros = torch.zeros((num_det,), dtype=torch.int64).to(device)
+        # print("zeros",zeros.shape, zeros)
         selected_indices = torch.cat([batches[None], zeros[None], idxs[None]], 0).T.contiguous()
         selected_indices = selected_indices.to(torch.int64)
+        # print(selected_indices.shape)
         return selected_indices
 
     @staticmethod
@@ -164,21 +168,25 @@ class ONNX_ORT(nn.Module):
         bboxes_w = x[..., 2:3]
         bboxes_h = x[..., 3:4]
         bboxes = torch.cat([bboxes_x, bboxes_y, bboxes_w, bboxes_h], dim = -1)
-        bboxes = bboxes.unsqueeze(2) # [n_batch, n_bboxes, 4] -> [n_batch, n_bboxes, 1, 4]
+        # bboxes = bboxes.unsqueeze(2) # [n_batch, n_bboxes, 4] -> [n_batch, n_bboxes, 1, 4]
+        # print("1:", bboxes.shape)
         obj_conf = x[..., 4:]
         scores = obj_conf
         bboxes @= self.convert_matrix
+        # print("2:", bboxes.shape)
         max_score, category_id = scores.max(2, keepdim=True)
+        # print("3:", max_score.shape, category_id.shape)
         dis = category_id.float() * self.max_wh
         nmsbox = bboxes + dis
         max_score_tp = max_score.transpose(1, 2).contiguous()
         selected_indices = ORT_NMS.apply(nmsbox, max_score_tp, self.max_obj, self.iou_threshold, self.score_threshold)
         X, Y = selected_indices[:, 0], selected_indices[:, 2]
         selected_boxes = bboxes[X, Y, :]
+        # print("4:", selected_boxes.shape)
         selected_categories = category_id[X, Y, :].float()
         selected_scores = max_score[X, Y, :]
         X = X.unsqueeze(1).float()
-        return torch.cat([X, selected_boxes, selected_categories, selected_scores], 1)
+        return X, selected_boxes, selected_scores, selected_categories
 
 
 class ONNX_TRT(nn.Module):
@@ -214,6 +222,7 @@ class ONNX_TRT(nn.Module):
                                                                     self.iou_threshold, self.max_obj,
                                                                     self.plugin_version, self.score_activation,
                                                                     self.score_threshold)
+        print(num_det.shape, det_boxes.shape, det_scores.shape, det_classes.shape)
         return num_det, det_boxes, det_scores, det_classes
 
 class End2End(nn.Module):

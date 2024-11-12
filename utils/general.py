@@ -899,8 +899,17 @@ def non_max_suppression(
          list of detections, on (n,6) tensor per image [xyxy, conf, cls]
     """
 
-    if isinstance(prediction, (list, tuple)):  # YOLO model in validation model, output = (inference_out, loss_out)
-        prediction = prediction[0]  # select only inference output
+    # if isinstance(prediction, (list, tuple)):  # YOLO model in validation model, output = (inference_out, loss_out)
+    #     prediction = prediction[0]  # select only inference output
+    if isinstance(prediction, (list, tuple)):
+            processed_predictions = []  # 用于存储处理后的张量列表
+            for pred_tensor in prediction:
+                # 对每个张量进行处理
+                processed_tensor = pred_tensor[0]  # 假设你只关心张量中的第一个结果
+                processed_predictions.append(processed_tensor)  # 将处理后的张量添加到列表中
+
+            # 使用处理后的张量列表中的第一个张量作为预测结果
+            prediction = processed_predictions[0]
 
     device = prediction.device
     mps = 'mps' in device.type  # Apple MPS
