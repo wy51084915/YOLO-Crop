@@ -1,0 +1,9 @@
+*.pt
+*.mp4
+weights/
+videos/
+runs/
+*.tmp
+__pycache__/
+*.pyc
+
